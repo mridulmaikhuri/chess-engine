@@ -5,7 +5,12 @@ project(ChessEngine)
 set(CMAKE_CXX_STANDARD 17)
 
 find_package(SDL3 REQUIRED)
+find_package(SDL3_image REQUIRED)
 
 add_executable(app src/main.cpp)
 
-target_link_libraries(app PRIVATE SDL3::SDL3)
+target_link_libraries(app
+    PRIVATE
+    SDL3::SDL3
+    SDL3_image::SDL3_image
+)
