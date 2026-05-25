@@ -20,8 +20,9 @@ This project focuses on building a fully interactive chess application from scra
 
 ---
 
-## Project Structure
+## 📁 Project Structure
 
+```text
 project/
 │
 ├── assets/               # Chess piece images and other assets
@@ -34,6 +35,7 @@ project/
 ├── CMakeLists.txt
 ├── .gitignore
 └── README.md
+```
 
 ---
 
