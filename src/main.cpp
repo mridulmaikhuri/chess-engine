@@ -1,73 +1,13 @@
 #include <SDL3/SDL.h>
 #include <iostream>
 #include <SDL3_image/SDL_image.h>
+#include "board.h"
 using namespace std;
 
-enum PieceType {
-    EMPTY,
-    PAWN,
-    ROOK,
-    KNIGHT,
-    BISHOP,
-    QUEEN,
-    KING
-};
-
-enum PieceColor {
-    NONE,
-    WHITE,
-    BLACK
-};
-
-struct Piece {
-    PieceType type;
-    PieceColor color;
-};
-
 const int WINDOW_WIDTH = 800, WINDOW_HEIGHT = 800;
-const int BOARD_SIZE = 8;
 const int TILE_SIZE = WINDOW_WIDTH/BOARD_SIZE;
 
-Piece board[BOARD_SIZE][BOARD_SIZE];
-
-void init_board() {
-    // Empty all squares
-    for (int row = 0;row < BOARD_SIZE;row ++) {
-        for (int col = 0;col < BOARD_SIZE;col ++) {
-            board[row][col] = {EMPTY, NONE};
-        }
-    }
-
-    // Pawns
-    for (int col = 0;col < BOARD_SIZE;col ++) {
-        board[1][col] = {PAWN, BLACK};
-        board[6][col] = {PAWN, WHITE};
-    }
-
-    // Rooks
-    board[0][0] = board[0][7] = {ROOK, BLACK};
-    board[7][0] = board[7][7] = {ROOK, WHITE};
-
-    // Knights
-    board[0][1] = board[0][6] = {KNIGHT, BLACK};
-    board[7][1] = board[7][6] = {KNIGHT, WHITE};
-
-    // Bishops
-    board[0][2] = board[0][5] = {BISHOP, BLACK};
-    board[7][2] = board[7][5] = {BISHOP, WHITE};
-
-    // Queens
-    board[0][3] = {QUEEN, BLACK};
-    board[7][3] = {QUEEN, WHITE};
-
-    // Kings
-    board[0][4] = {KING, BLACK};
-    board[7][4] = {KING, WHITE};
-}
-
 int main() {
-    init_board();
-
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         std::cout << "SDL Init Failed\n";
         return 1;
@@ -108,6 +48,11 @@ int main() {
     SDL_Texture* whiteKing = drawPiece("../assets/white-king.png");
     SDL_Texture* blackKing = drawPiece("../assets/black-king.png");
 
+    SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_POINTER));
+
+    // Initialize board
+    Board board;
+
     bool running = true;
     bool pieceSelected = false;
     int selectedRow = -1, selectedCol = -1;
@@ -124,15 +69,20 @@ int main() {
                 int row = mouseY/TILE_SIZE;
                 
                 if (!pieceSelected) {
-                    if (board[row][col].type != EMPTY) {
+                    if (board.getPiece(row, col).type != EMPTY) {
                         pieceSelected = true;
                         selectedRow = row;
                         selectedCol = col;
                     }
-                } else {
-                    board[row][col] = board[selectedRow][selectedCol];
-                    board[selectedRow][selectedCol] = {EMPTY, NONE};
+                } else if (board.isMoveValid(selectedRow, selectedCol, row, col)) {
+                    board.movePiece(selectedRow, selectedCol, row, col);
                     pieceSelected = false;
+                    selectedRow = row;
+                    selectedCol = col;
+                } else {
+                    pieceSelected = false;
+                    selectedRow = -1;
+                    selectedCol = -1;
                 }
             }
         }
@@ -158,13 +108,27 @@ int main() {
                 };
 
                 SDL_RenderFillRect(renderer, &square);
+                
+                // set boarder around selected square
+                if (row == selectedRow && col == selectedCol) {
+                    SDL_SetRenderDrawColor(renderer, 70, 70, 80, 255);
+                    for (int i = 0;i < 3;i ++) {
+                        SDL_FRect border = {
+                            square.x + i,
+                            square.y + i,
+                            square.w - 2 * i,
+                            square.h - 2 * i
+                        };
+                        SDL_RenderRect(renderer, &border);
+                    }
+                }
             }
         }
 
         // Draw Pieces
         for (int row = 0;row < BOARD_SIZE;row ++) {
             for (int col = 0;col < BOARD_SIZE;col ++) {
-                Piece piece = board[row][col];
+                Piece piece = board.getPiece(row, col);
                 if (piece.type == EMPTY) continue;
 
                 SDL_Texture* texture = nullptr;
