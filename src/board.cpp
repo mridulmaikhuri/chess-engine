@@ -117,14 +117,36 @@ bool Board::isKnightMoveValid(int fromRow, int fromCol, int toRow, int toCol) co
 }
 
 bool Board::isBishopMoveValid(int fromRow, int fromCol, int toRow, int toCol) const {
+    int rowDiff = abs(fromRow - toRow);
+    int colDiff = abs(fromCol - toCol);
+
+    if (rowDiff != colDiff) return false;
+
+    int rd = (fromRow < toRow) ? 1 : -1;
+    int cd = (fromCol < toCol) ? 1 : -1;
+
+    int row = fromRow, col = fromCol;
+
+    for (int i = 0;i < rowDiff - 1;i ++) {
+        row += rd, col += cd;
+        Piece piece = board[row][col];
+        if (piece.type != EMPTY) return false;
+    }
+
     return true;
 }
 
 bool Board::isQueenMoveValid(int fromRow, int fromCol, int toRow, int toCol) const {
-    return true;
+    return isBishopMoveValid(fromRow, fromCol, toRow, toCol) || 
+        isRookMoveValid(fromRow, fromCol, toRow, toCol);
 }
 
 bool Board::isKingMoveValid(int fromRow, int fromCol, int toRow, int toCol) const {
-    return true;
+    int rowDiff = abs(fromRow - toRow);
+    int colDiff = abs(fromCol - toCol);
+
+    //TODO: Handle the king check event
+
+    return max(rowDiff, colDiff) == 1;
 }
 
