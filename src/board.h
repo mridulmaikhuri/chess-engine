@@ -40,5 +40,17 @@ public:
     void movePiece(int fromRow, int fromCol, int toRow, int toCol);
 
     bool isMoveValid(int fromRow, int fromCol, int toRow, int toCol) const;
+
+    bool isPawnMoveValid(int fromRow, int fromCol, int toRow, int toCol) const;
+
+    bool isRookMoveValid(int fromRow, int fromCol, int toRow, int toCol) const;
+
+    bool isKnightMoveValid(int fromRow, int fromCol, int toRow, int toCol) const;
+
+    bool isBishopMoveValid(int fromRow, int fromCol, int toRow, int toCol) const;
+
+    bool isKingMoveValid(int fromRow, int fromCol, int toRow, int toCol) const;
+
+    bool isQueenMoveValid(int fromRow, int fromCol, int toRow, int toCol) const;
 };
 

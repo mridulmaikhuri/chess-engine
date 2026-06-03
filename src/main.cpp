@@ -67,6 +67,7 @@ int main() {
 
                 int col = mouseX/TILE_SIZE;
                 int row = mouseY/TILE_SIZE;
+                //cout << row << " " << col << "\n";
                 
                 if (!pieceSelected) {
                     if (board.getPiece(row, col).type != EMPTY) {
@@ -75,11 +76,13 @@ int main() {
                         selectedCol = col;
                     }
                 } else if (board.isMoveValid(selectedRow, selectedCol, row, col)) {
+                    //cout << "Inside else if block\n";
                     board.movePiece(selectedRow, selectedCol, row, col);
                     pieceSelected = false;
-                    selectedRow = row;
-                    selectedCol = col;
+                    selectedRow = -1;
+                    selectedCol = -1;
                 } else {
+                    //printf("Inside else block\n");
                     pieceSelected = false;
                     selectedRow = -1;
                     selectedCol = -1;
