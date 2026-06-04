@@ -150,3 +150,78 @@ bool Board::isKingMoveValid(int fromRow, int fromCol, int toRow, int toCol) cons
     return max(rowDiff, colDiff) == 1;
 }
 
+bool Board::isKingInCheck(PieceColor color) const {
+    int kingRow = -1, kingCol = -1;
+
+    for (int row = 0;row < BOARD_SIZE;row ++) {
+        for (int col = 0;col < BOARD_SIZE;col ++) {
+            Piece piece = board[row][col];
+
+            if (piece.type == KING && piece.color == color) {
+                kingRow = row;
+                kingCol = col;
+                break;
+            }
+        }
+    }
+
+    if (kingRow == -1) {
+        return false;
+    }
+
+    PieceColor enemyColor = (color == WHITE) ? BLACK : WHITE;
+
+    for (int row = 0;row < BOARD_SIZE;row ++) {
+        for (int col = 0;col < BOARD_SIZE;col ++) {
+            Piece piece = board[row][col];
+
+            if (piece.color != enemyColor) continue;
+
+            switch (piece.type) {
+                case PAWN:
+                    int direction = (enemyColor == WHITE) ? -1 : 1;
+                    if (row + direction == kingRow && (col - 1 == kingCol || col + 1 == kingCol)) return true;
+                    break;
+                
+                case ROOK:
+                    if (isRookMoveValid(row, col, kingRow, kingCol)) return true;
+                    break;
+                
+                case KNIGHT:
+                    if (isKnightMoveValid(row, col, kingRow, kingCol)) return true;
+                    break;
+
+                case BISHOP:
+                    if (isBishopMoveValid(row, col, kingRow, kingCol)) return true;
+                    break;
+
+                case QUEEN:
+                    if (isQueenMoveValid(row, col, kingRow, kingCol)) return true;
+                    break;
+                
+                case KING:
+                    int rowDiff = abs(row - kingRow);
+                    int colDiff = abs(col - kingCol);
+
+                    if (max(rowDiff, colDiff) == 1) return true;
+                    break;
+                
+                default:
+                    break;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool Board::wouldLeaveKingInCheck(int fromRow, int fromCol, int toRow, int toCol) const {
+    Board temp = *this;
+
+    Piece movingPiece = temp.board[fromRow][fromCol];
+
+    temp.board[toRow][toCol] = movingPiece;
+    temp.board[fromRow][fromCol] = {EMPTY, NONE};
+
+    return temp.isKingInCheck(movingPiece.color);
+}

@@ -26,10 +26,30 @@ struct Piece {
 class Board {
 private:
     Piece board[BOARD_SIZE][BOARD_SIZE];
+
     PieceColor turn;
 
+    bool whiteKingMoved;
+    bool blackKingMoved;
+
+    bool whiteKingsideRookMoved;
+    bool whiteQueensideRookMoved;
+
+    bool blackKingsideRookMoved;
+    bool blackQueensideRookeMoved;
+
+    bool enPassantAvailable;
+    bool enPassantRow;
+    bool enPassantCol;
+
+    bool gameOver;
+    PieceColor winner;
+
     bool isSquareValid(int row, int col) const;
-    
+
+    bool wouldLeaveKingInCheck(int fromRow, int fromCol, int toRow, int toCol) const;
+
+    bool hasAnyLegalMove(PieceColor color) const;
 public:
     Board();
 
@@ -52,5 +72,13 @@ public:
     bool isKingMoveValid(int fromRow, int fromCol, int toRow, int toCol) const;
 
     bool isQueenMoveValid(int fromRow, int fromCol, int toRow, int toCol) const;
+
+    bool isKingInCheck(PieceColor color) const;
+
+    bool isCheckmate(PieceColor color) const;
+
+    bool isStalemate(PieceColor color) const;
+
+    void promotePawn(int row, int col);
 };
 
