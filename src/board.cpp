@@ -5,7 +5,23 @@ using namespace std;
 Board::Board() {
     init();
     turn = WHITE;
-}
+
+    whiteKingMoved = false;
+    blackKingMoved = false;
+
+    whiteKingsideRookMoved = false;
+    whiteQueensideRookMoved = false;
+
+    blackKingsideRookMoved = false;
+    blackQueensideRookeMoved = false;
+
+    enPassantAvailable = false;
+    enPassantRow = -1;
+    enPassantCol = -1;
+
+    gameOver = false;
+    winner = NONE;
+}   
 
 void Board::init() {
     // Empty all squares
@@ -59,29 +75,97 @@ void Board::movePiece(int fromRow, int fromCol, int toRow, int toCol) {
     board[fromRow][fromCol] = {EMPTY, NONE};
 }
 
-bool Board::isMoveValid(int fromRow, int fromCol, int toRow, int toCol) const {
-    if (!isSquareValid(fromRow, fromCol) || 
-        !isSquareValid(toRow, toCol) || 
-        (fromRow == fromCol && toRow == toCol)) return false;
+bool Board::isMoveLegal(int fromRow, int fromCol, int toRow, int toCol) {
+    if (!isSquareValid(fromRow, fromCol) || !isSquareValid(toRow, toCol)) return false;
 
     Piece fromPiece = board[fromRow][fromCol];
-    Piece toSquare = board[toRow][toCol];
-    //cout << fromPiece.type << " " << fromPiece.color << "\n";
+    Piece toPiece = board[toRow][toCol];
 
-    if (turn == fromPiece.color && turn != toSquare.color) {
-        if (fromPiece.type == PAWN) return isPawnMoveValid(fromRow, fromCol, toRow, toCol);
-        if (fromPiece.type == ROOK) return isRookMoveValid(fromRow, fromCol, toRow, toCol);
-        if (fromPiece.type == KNIGHT) return isKnightMoveValid(fromRow, fromCol, toRow, toCol);
-        if (fromPiece.type == BISHOP) return isBishopMoveValid(fromRow, fromCol, toRow, toCol);
-        if (fromPiece.type == QUEEN) return isQueenMoveValid(fromRow, fromCol, toRow, toCol);
-        if (fromPiece.type == KING) return isKingMoveValid(fromRow, fromCol, toRow, toCol);
-    } else {
-        return false;
+    if (fromPiece.type == EMPTY) return false;
+    if (fromPiece.color == toPiece.color) return false;
+
+    switch (fromPiece.type) {
+        case PAWN:
+            return isPawnMoveValid(fromRow, fromCol, toRow, toCol);
+        
+        case ROOK:
+            return isRookMoveValid(fromRow, fromCol, toRow, toCol);
+        
+        case KNIGHT:
+            return isKnightMoveValid(fromRow, fromCol, toRow, toCol);
+
+        case BISHOP:
+            return isBishopMoveValid(fromRow, fromCol, toRow, toCol);
+        
+        case QUEEN:
+            return isQueenMoveValid(fromRow, fromCol, toRow, toCol);
+        
+        case KING:
+            return isKingMoveValid(fromRow, fromCol, toRow, toCol);
+        
+        default:
+            return false;
     }
+}   
+
+bool Board::isMoveValid(int fromRow, int fromCol, int toRow, int toCol) {
+    Piece piece = board[fromRow][fromCol];
+
+    if (piece.color != turn) return false;
+
+    if (!isMoveLegal(fromRow, fromCol, toRow, toCol)) return false;
+
+    if (wouldLeaveKingInCheck(fromRow, fromCol, toRow, toCol)) return false;
+
+    return true;
 }
 
-bool Board::isPawnMoveValid(int fromRow, int fromCol, int toRow, int toCol) const {
-    return true;
+bool Board::isPawnMoveValid(int fromRow, int fromCol, int toRow, int toCol) {
+    Piece piece = board[fromRow][fromCol];
+    Piece target = board[toRow][toCol];
+    
+    int dir = (piece.color == WHITE) ? -1 : 1;
+    int stRow = (piece.color == WHITE) ? 6 : 1;
+
+    if (fromCol == toCol && toRow == fromRow + dir && target.type == EMPTY) {
+        enPassantAvailable = false;
+        enPassantRow = -1;
+        enPassantCol = -1;
+        return true;
+    }
+
+    if (fromCol == toCol && fromRow == stRow && toRow == fromRow + 2 * dir 
+        && target.type == EMPTY && board[fromRow + dir][fromCol].type == EMPTY) 
+    {  
+        enPassantAvailable = true;
+        enPassantRow = (fromRow + toRow)/2;
+        enPassantCol = fromCol;
+        return true;
+    }
+
+    if (abs(toCol - fromCol) == 1 && toRow == fromRow + dir 
+        && target.type != EMPTY && target.color != piece.color) 
+    {
+        enPassantAvailable = false;
+        enPassantRow = -1;
+        enPassantCol = -1;
+        return true;
+    }
+
+    if (abs(toCol - fromCol) == 1 && toRow == fromRow + dir
+        && target.type == EMPTY && enPassantAvailable && toRow == enPassantRow
+        && toCol == enPassantCol) 
+    {   
+        enPassantAvailable = false;
+        enPassantRow = -1;
+        enPassantCol = -1;
+
+        int capturedPawnRow = (piece.color == WHITE) ? toRow + 1 : toRow - 1;
+        board[capturedPawnRow][toCol] = {EMPTY, NONE};
+        return true;
+    }
+
+    return false;
 }
 
 bool Board::isRookMoveValid(int fromRow, int fromCol, int toRow, int toCol) const {
@@ -224,4 +308,45 @@ bool Board::wouldLeaveKingInCheck(int fromRow, int fromCol, int toRow, int toCol
     temp.board[fromRow][fromCol] = {EMPTY, NONE};
 
     return temp.isKingInCheck(movingPiece.color);
+}
+
+bool Board::hasAnyLegalMove(PieceColor color) {
+    Board temp = *this;
+    temp.turn = color;
+
+    for (int fromRow = 0;fromRow < BOARD_SIZE;fromRow ++) {
+        for (int fromCol = 0;fromCol < BOARD_SIZE;fromCol ++) {
+            Piece piece = temp.board[fromRow][fromCol];
+
+            if (piece.color != color) continue;
+            
+            for (int toRow = 0;toRow < BOARD_SIZE;toRow ++) {
+                for (int toCol = 0;toCol < BOARD_SIZE;toCol ++) {
+                    if (temp.isMoveValid(fromRow, fromCol, toRow, toCol)) return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+bool Board::isCheckmate(PieceColor color) {
+    return isKingInCheck(color) && !hasAnyLegalMove(color);
+}
+
+bool Board::isStalemate(PieceColor color) {
+    return !isKingInCheck(color) && !hasAnyLegalMove(color);
+}
+
+void Board::promotePawn(int row, int col, PieceType promotionPiece) {
+    Piece &piece = board[row][col];
+
+    if (piece.type != PAWN) return;
+
+    if ((piece.color == WHITE && row == 0) ||
+        (piece.color == BLACK && row == 7)) 
+    {
+        piece.type = promotionPiece;
+    }
 }

@@ -39,8 +39,8 @@ private:
     bool blackQueensideRookeMoved;
 
     bool enPassantAvailable;
-    bool enPassantRow;
-    bool enPassantCol;
+    int enPassantRow;
+    int enPassantCol;
 
     bool gameOver;
     PieceColor winner;
@@ -49,7 +49,7 @@ private:
 
     bool wouldLeaveKingInCheck(int fromRow, int fromCol, int toRow, int toCol) const;
 
-    bool hasAnyLegalMove(PieceColor color) const;
+    bool hasAnyLegalMove(PieceColor color);
 public:
     Board();
 
@@ -59,9 +59,9 @@ public:
 
     void movePiece(int fromRow, int fromCol, int toRow, int toCol);
 
-    bool isMoveValid(int fromRow, int fromCol, int toRow, int toCol) const;
+    bool isMoveValid(int fromRow, int fromCol, int toRow, int toCol);
 
-    bool isPawnMoveValid(int fromRow, int fromCol, int toRow, int toCol) const;
+    bool isPawnMoveValid(int fromRow, int fromCol, int toRow, int toCol);
 
     bool isRookMoveValid(int fromRow, int fromCol, int toRow, int toCol) const;
 
@@ -75,10 +75,12 @@ public:
 
     bool isKingInCheck(PieceColor color) const;
 
-    bool isCheckmate(PieceColor color) const;
+    bool isCheckmate(PieceColor color);
 
-    bool isStalemate(PieceColor color) const;
+    bool isStalemate(PieceColor color);
 
-    void promotePawn(int row, int col);
+    bool isMoveLegal(int fromRow, int fromCol, int toRow, int toCol);
+
+    void promotePawn(int row, int col, PieceType promotionPiece);
 };
 
