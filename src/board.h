@@ -23,6 +23,12 @@ struct Piece {
     PieceColor color;
 };
 
+struct Move {
+    int fromRow, fromCol;
+    int toRow, toCol;
+    PieceType promotion;
+};
+
 class Board {
 private:
     Piece board[BOARD_SIZE][BOARD_SIZE];
@@ -45,23 +51,46 @@ private:
     bool gameOver;
     PieceColor winner;
 
+    int whiteKingRow, whiteKingCol;
+    int blackKingRow, blackKingCol;
+
+    struct MoveRecord {
+        int fromRow, fromCol, toRow, toCol;
+        Piece movedPiece;
+        Piece capturedPiece;
+        PieceType promotedTo;
+
+        bool prevEnPassantAvailable;
+        int prevEnPassantRow, prevEnPassantCol;
+
+        bool prevWhiteKingMoved;
+        bool prevBlackKingMoved;
+        bool prevWhiteKingSideRookMoved;
+        bool prevWhiteQueenSideRookMoved;
+        bool prevBlackKingSideRookMoved;
+        bool prevBlackQueenSideRookMoved;
+
+        bool wasEnPassant;
+        
+        bool wasCastle;
+        int rookFromCol;
+        int rookToCol;
+
+        int enPassantCapturedRow, enPassantCapturedCol;
+    };
+
+    MoveRecord history[1024];
+    int historySize;
+
     bool isSquareValid(int row, int col) const;
 
     bool wouldLeaveKingInCheck(int fromRow, int fromCol, int toRow, int toCol) const;
 
     bool hasAnyLegalMove(PieceColor color);
-public:
-    Board();
 
-    void init();
+    bool isSquareAttacked(int row, int col, PieceColor color) const;
 
-    Piece getPiece(int row, int col) const;
-
-    void movePiece(int fromRow, int fromCol, int toRow, int toCol);
-
-    bool isMoveValid(int fromRow, int fromCol, int toRow, int toCol);
-
-    bool isPawnMoveValid(int fromRow, int fromCol, int toRow, int toCol);
+    bool isPawnMoveValid(int fromRow, int fromCol, int toRow, int toCol) const;
 
     bool isRookMoveValid(int fromRow, int fromCol, int toRow, int toCol) const;
 
@@ -73,13 +102,30 @@ public:
 
     bool isQueenMoveValid(int fromRow, int fromCol, int toRow, int toCol) const;
 
-    bool isKingInCheck(PieceColor color) const;
+    void updateKingPosition(PieceColor, int row, int col);
+public:
+    Board();
 
-    bool isCheckmate(PieceColor color);
+    void init();
 
-    bool isStalemate(PieceColor color);
+    Piece getPiece(int row, int col) const;
 
+    PieceColor getTurn() const { return turn; }
+
+    bool isGameOver() const { return gameOver; }
+
+    PieceColor getWinner() const { return winner; }
+
+    void movePiece(int fromRow, int fromCol, int toRow, int toCol);
+
+    bool undoMove();
+
+    bool isMoveValid(int fromRow, int fromCol, int toRow, int toCol);
     bool isMoveLegal(int fromRow, int fromCol, int toRow, int toCol);
+
+    bool isKingInCheck(PieceColor color) const;
+    bool isCheckmate(PieceColor color);
+    bool isStalemate(PieceColor color);
 
     void promotePawn(int row, int col, PieceType promotionPiece);
 };
