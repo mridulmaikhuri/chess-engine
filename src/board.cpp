@@ -204,6 +204,50 @@ void Board::movePiece(int fromRow, int fromCol, int toRow, int toCol) {
     }
 }
 
+bool Board::undoMove() {
+    if (historySize == 0) return false;
+
+    MoveRecord rec = history[--historySize];
+
+    board[rec.fromRow][rec.fromCol] = rec.movedPiece;
+    board[rec.toRow][rec.toCol] = rec.capturedPiece;
+
+    if (rec.promotedTo != EMPTY) {
+        board[rec.fromRow][rec.fromCol].type = PAWN;
+    }
+
+    if (rec.wasCastle) {
+        board[rec.fromRow][rec.rookFromCol] = board[rec.fromRow][rec.rookToCol];
+        board[rec.fromRow][rec.rookToCol] = {EMPTY, NONE};
+    }
+
+    if (rec.wasEnPassant) {
+        board[rec.enPassantCapturedRow][rec.enPassantCapturedCol] = rec.capturedPiece;
+        board[rec.toRow][rec.toCol] = {EMPTY, NONE};
+    }
+
+    if (rec.movedPiece.type == KING) {
+        updateKingPosition(rec.movedPiece.color, rec.fromRow, rec.fromCol);
+    }
+
+    enPassantAvailable = rec.prevEnPassantAvailable;
+    enPassantRow = rec.prevEnPassantRow;
+    enPassantCol = rec.prevEnPassantCol;
+
+    whiteKingMoved = rec.prevWhiteKingMoved;
+    blackKingMoved = rec.prevBlackKingMoved;
+    whiteKingsideRookMoved = rec.prevWhiteKingSideRookMoved;
+    whiteQueensideRookMoved = rec.prevWhiteQueenSideRookMoved;
+    blackKingsideRookMoved = rec.prevBlackKingSideRookMoved;
+    blackQueensideRookeMoved = rec.prevBlackQueenSideRookMoved;
+
+    gameOver = false;
+    winner = NONE;
+
+    turn = (turn == WHITE) ? BLACK : WHITE;
+    return true;
+}
+
 bool Board::isMoveLegal(int fromRow, int fromCol, int toRow, int toCol) {
     if (!isSquareValid(fromRow, fromCol) || !isSquareValid(toRow, toCol)) return false;
     if (fromRow == toRow && fromCol == toCol) return false;
@@ -347,32 +391,49 @@ bool Board::isKingMoveValid(int fromRow, int fromCol, int toRow, int toCol) cons
     int colDiff = abs(fromCol - toCol);
 
     //TODO: Handle the king check event
+    Piece king = board[fromRow][fromCol];
 
-    return max(rowDiff, colDiff) == 1;
-}
+    if (max(rowDiff, colDiff) == 1) return true;
 
-bool Board::isKingInCheck(PieceColor color) const {
-    int kingRow = -1, kingCol = -1;
+    // castling
+    if (rowDiff != 0 || colDiff != 2) return false;
 
-    for (int row = 0;row < BOARD_SIZE;row ++) {
-        for (int col = 0;col < BOARD_SIZE;col ++) {
-            Piece piece = board[row][col];
+    bool kingMoved = (king.color == WHITE) ? whiteKingMoved : blackKingMoved;
+    int backRank = (king.color == WHITE) ? 7 : 0;
 
-            if (piece.type == KING && piece.color == color) {
-                kingRow = row;
-                kingCol = col;
-                break;
-            }
-        }
-    }
+    if (kingMoved || fromRow != backRank || fromCol != 4) return false;
 
-    if (kingRow == -1) {
+    if (isKingInCheck(king.color)) return false;
+    
+    PieceColor enemy = (king.color == WHITE) ? BLACK : WHITE;
+
+    if (toCol == 6) {
+        bool rookMoved = (king.color == WHITE) ? whiteKingsideRookMoved : blackKingsideRookMoved;
+        if (rookMoved) return false;
+
+        if (board[backRank][5].type != EMPTY || board[backRank][6].type != EMPTY) return false;
+        if (isSquareAttacked(backRank, 5, enemy)) return false;
+        if (isSquareAttacked(backRank, 6, enemy)) return false;
+    } else if (toCol == 2) {
+        bool rookMoved = (king.color == WHITE) ? whiteQueensideRookMoved : blackQueensideRookeMoved;
+        if (rookMoved) return false;
+        if (board[backRank][1].type != EMPTY || board[backRank][2].type != EMPTY
+            || board[backRank][3].type != EMPTY) return false;
+        if (isSquareAttacked(backRank, 3, enemy)) return false;
+        if (isSquareAttacked(backRank, 2, enemy)) return false; 
+    } else {
         return false;
     }
 
-    PieceColor enemyColor = (color == WHITE) ? BLACK : WHITE;
+    return true;
+}
 
-    return isSquareAttacked(kingRow, kingCol, enemyColor);
+bool Board::isKingInCheck(PieceColor color) const {
+    int kingRow = (color == WHITE) ? whiteKingRow : blackKingRow;
+    int kingCol = (color == WHITE) ? whiteKingCol : blackKingCol;
+
+    PieceColor enemy = (color == WHITE) ? BLACK : WHITE;
+    return isSquareAttacked(kingRow, kingCol, enemy);   
 }
 
 bool Board::wouldLeaveKingInCheck(int fromRow, int fromCol, int toRow, int toCol) const {
@@ -380,8 +441,17 @@ bool Board::wouldLeaveKingInCheck(int fromRow, int fromCol, int toRow, int toCol
 
     Piece movingPiece = temp.board[fromRow][fromCol];
 
+    if (movingPiece.type == PAWN && abs(toCol - fromCol) == 1
+    && temp.board[toRow][toCol].type == EMPTY && temp.enPassantAvailable
+    && toRow == temp.enPassantRow && toCol == temp.enPassantCol) {
+        int capturedRow = (movingPiece.color == WHITE) ? toRow + 1 : toRow - 1;
+        temp.board[capturedRow][toCol] = {EMPTY, NONE};
+    }
+
     temp.board[toRow][toCol] = movingPiece;
     temp.board[fromRow][fromCol] = {EMPTY, NONE};
+
+    if (movingPiece.type == KING) temp.updateKingPosition(movingPiece.color, toRow, toCol);
 
     return temp.isKingInCheck(movingPiece.color);
 }
