@@ -6,7 +6,9 @@ using namespace std;
 
 Board::Board() {
     init();
+}   
 
+void Board::init() {
     historySize = 0;
 
     turn = WHITE;
@@ -30,9 +32,7 @@ Board::Board() {
     whiteKingCol = 4;
     blackKingRow = 0;
     blackKingCol = 4;
-}   
-
-void Board::init() {
+     
     // Empty all squares
     for (int row = 0;row < BOARD_SIZE;row ++) {
         for (int col = 0;col < BOARD_SIZE;col ++) {
@@ -86,8 +86,7 @@ void Board::updateKingPosition(PieceColor color, int row, int col) {
     }
 }
 
-void Board::movePiece(int fromRow, int fromCol, int toRow, int toCol) {
-    if (!isMoveValid(fromRow, fromCol, toRow, toCol)) return;
+void Board::movePiece(int fromRow, int fromCol, int toRow, int toCol, PieceType promotionType) {
 
     Piece piece = board[fromRow][fromCol];
     Piece captured = board[toRow][toCol];
@@ -130,8 +129,7 @@ void Board::movePiece(int fromRow, int fromCol, int toRow, int toCol) {
     }
 
     // castling
-    bool isCastle = (piece.type == KING && abs(toCol - fromCol) == 2);
-    if (isCastle) {
+    if (piece.type == KING && abs(toCol - fromCol) == 2) {
         rec.wasCastle = true;
 
         if (toCol > fromCol) {
@@ -163,10 +161,12 @@ void Board::movePiece(int fromRow, int fromCol, int toRow, int toCol) {
         if (fromRow == 0 && fromCol == 7) blackKingsideRookMoved = true;
     }
 
-    if (toRow == 7 && toCol == 0) whiteQueensideRookMoved = true;
-    if (toRow == 7 && toCol == 7) whiteKingsideRookMoved = true;
-    if (toRow == 0 && toCol == 0) blackQueensideRookeMoved = true;
-    if (toRow == 0 && toCol == 7) blackKingsideRookMoved = true;
+    if (captured.type == ROOK) {
+        if (toRow == 7 && toCol == 0) whiteQueensideRookMoved = true;
+        if (toRow == 7 && toCol == 7) whiteKingsideRookMoved = true;
+        if (toRow == 0 && toCol == 0) blackQueensideRookeMoved = true;
+        if (toRow == 0 && toCol == 7) blackKingsideRookMoved = true;
+    }
 
     // enPassant flag for next move
     if (piece.type == PAWN && abs(toRow - fromRow) == 2) {
@@ -181,7 +181,7 @@ void Board::movePiece(int fromRow, int fromCol, int toRow, int toCol) {
 
     // Pawn promotion
     if (piece.type == PAWN && ((piece.color == WHITE && toRow == 0) || (piece.color == BLACK && toRow == 7))) { 
-        promotePawn(toRow, toCol, QUEEN);
+        promotePawn(toRow, toCol, promotionType );
     }
 
     // Save Record
@@ -390,7 +390,6 @@ bool Board::isKingMoveValid(int fromRow, int fromCol, int toRow, int toCol) cons
     int rowDiff = abs(fromRow - toRow);
     int colDiff = abs(fromCol - toCol);
 
-    //TODO: Handle the king check event
     Piece king = board[fromRow][fromCol];
 
     if (max(rowDiff, colDiff) == 1) return true;
@@ -410,7 +409,6 @@ bool Board::isKingMoveValid(int fromRow, int fromCol, int toRow, int toCol) cons
     if (toCol == 6) {
         bool rookMoved = (king.color == WHITE) ? whiteKingsideRookMoved : blackKingsideRookMoved;
         if (rookMoved) return false;
-
         if (board[backRank][5].type != EMPTY || board[backRank][6].type != EMPTY) return false;
         if (isSquareAttacked(backRank, 5, enemy)) return false;
         if (isSquareAttacked(backRank, 6, enemy)) return false;
@@ -436,7 +434,7 @@ bool Board::isKingInCheck(PieceColor color) const {
     return isSquareAttacked(kingRow, kingCol, enemy);   
 }
 
-bool Board::wouldLeaveKingInCheck(int fromRow, int fromCol, int toRow, int toCol) const {
+bool Board::wouldLeaveKingInCheck(int fromRow, int fromCol, int toRow, int toCol) {
     Board temp = *this;
 
     Piece movingPiece = temp.board[fromRow][fromCol];
@@ -509,10 +507,11 @@ bool Board::isSquareAttacked(int row, int col, PieceColor color) const {
             if (piece.color != color) continue;
 
             switch (piece.type) {
-                case PAWN:
+                case PAWN: {
                     int dir = (color == WHITE) ? -1 : 1;
                     if (r + dir == row && abs(col - c) == 1) return true;
                     break;
+                }
                 
                 case ROOK:
                     if (isRookMoveValid(r, c, row, col)) return true;

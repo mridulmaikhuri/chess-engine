@@ -84,7 +84,7 @@ private:
 
     bool isSquareValid(int row, int col) const;
 
-    bool wouldLeaveKingInCheck(int fromRow, int fromCol, int toRow, int toCol) const;
+    bool wouldLeaveKingInCheck(int fromRow, int fromCol, int toRow, int toCol);
 
     bool hasAnyLegalMove(PieceColor color);
 
@@ -116,15 +116,18 @@ public:
 
     PieceColor getWinner() const { return winner; }
 
-    void movePiece(int fromRow, int fromCol, int toRow, int toCol);
+    void movePiece(int fromRow, int fromCol, int toRow, int toCol, PieceType promotionType);
 
     bool undoMove();
 
     bool isMoveValid(int fromRow, int fromCol, int toRow, int toCol);
+
     bool isMoveLegal(int fromRow, int fromCol, int toRow, int toCol);
 
     bool isKingInCheck(PieceColor color) const;
+
     bool isCheckmate(PieceColor color);
+
     bool isStalemate(PieceColor color);
 
     void promotePawn(int row, int col, PieceType promotionPiece);

@@ -33,7 +33,7 @@ SDL_Texture* loadTexture(SDL_Renderer* renderer, const char* path) {
     SDL_Surface* surface = IMG_Load(path);
     if (!surface) {
         cout << "Failed to load image\n";
-        return;
+        return nullptr;
     }
 
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
@@ -122,7 +122,7 @@ void handleBoardClick(AppState& state, int row, int col) {
                 state.promotionCol = col;
                 state.promotionColor = movingPiece.color;
             } else {
-                board.movePiece(state.selectedRow, state.selectedCol, row, col);
+                board.movePiece(state.selectedRow, state.selectedCol, row, col, EMPTY);
                 state.pieceSelected = false;
                 state.selectedRow = -1;
                 state.selectedCol = -1;
@@ -156,11 +156,13 @@ void handlePromotionClick(AppState& state, int mouseX, int mouseY, int tileSize)
         };
 
         if (mouseX >= box.x && mouseX < box.x + box.w &&
-        mouseY >= box.y && mouseY < box.y + box.h) {
-            // later add the choices argument here
+        mouseY >= box.y && mouseY < box.y + box.h && 
+        state.board.isMoveValid(state.selectedRow, state.selectedCol,
+        state.promotionRow, state.promotionCol)) {
             state.board.movePiece(
                 state.selectedRow, state.selectedCol,
-                state.promotionRow, state.promotionCol
+                state.promotionRow, state.promotionCol, 
+                choices[i]
             );
             state.pieceSelected = false;
             state.selectedRow = -1;
