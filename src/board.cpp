@@ -87,7 +87,6 @@ void Board::updateKingPosition(PieceColor color, int row, int col) {
 }
 
 void Board::movePiece(int fromRow, int fromCol, int toRow, int toCol, PieceType promotionType) {
-
     Piece piece = board[fromRow][fromCol];
     Piece captured = board[toRow][toCol];
 
@@ -234,7 +233,7 @@ void Board::undoMove() {
     turn = (turn == WHITE) ? BLACK : WHITE;
 }
 
-bool Board::isMoveLegal(int fromRow, int fromCol, int toRow, int toCol) {
+bool Board::isMoveValid(int fromRow, int fromCol, int toRow, int toCol) {
     if (!isSquareValid(fromRow, fromCol) || !isSquareValid(toRow, toCol)) return false;
     if (fromRow == toRow && fromCol == toCol) return false;
 
@@ -242,44 +241,40 @@ bool Board::isMoveLegal(int fromRow, int fromCol, int toRow, int toCol) {
     Piece toPiece = board[toRow][toCol];
 
     if (fromPiece.type == EMPTY) return false;
+    if (fromPiece.color != turn) return false;
     if (fromPiece.color == toPiece.color) return false;
 
+    bool isMoveLegal = false;
     switch (fromPiece.type) {
         case PAWN:
-            return isPawnMoveValid(fromRow, fromCol, toRow, toCol);
+            isMoveLegal = isPawnMoveValid(fromRow, fromCol, toRow, toCol);
+            break;
         
         case ROOK:
-            return isRookMoveValid(fromRow, fromCol, toRow, toCol);
+            isMoveLegal = isRookMoveValid(fromRow, fromCol, toRow, toCol);
+            break;
         
         case KNIGHT:
-            return isKnightMoveValid(fromRow, fromCol, toRow, toCol);
+            isMoveLegal = isKnightMoveValid(fromRow, fromCol, toRow, toCol);
+            break;
 
         case BISHOP:
-            return isBishopMoveValid(fromRow, fromCol, toRow, toCol);
+            isMoveLegal = isBishopMoveValid(fromRow, fromCol, toRow, toCol);
+            break;
         
         case QUEEN:
-            return isQueenMoveValid(fromRow, fromCol, toRow, toCol);
+            isMoveLegal = isQueenMoveValid(fromRow, fromCol, toRow, toCol);
+            break;
         
         case KING:
-            return isKingMoveValid(fromRow, fromCol, toRow, toCol);
+            isMoveLegal = isKingMoveValid(fromRow, fromCol, toRow, toCol);
+            break;
         
         default:
-            return false;
+            break;
     }
-}   
-
-bool Board::isMoveValid(int fromRow, int fromCol, int toRow, int toCol) {
-    if (!isSquareValid(fromRow, fromCol) || !isSquareValid(toRow, toCol)) return false;
-
-    Piece piece = board[fromRow][fromCol];
-
-    if (piece.color != turn) return false;
-
-    if (!isMoveLegal(fromRow, fromCol, toRow, toCol)) return false;
-
-    if (wouldLeaveKingInCheck(fromRow, fromCol, toRow, toCol)) return false;
-
-    return true;
+    
+    return isMoveLegal && !wouldLeaveKingInCheck(fromRow, fromCol, toRow, toCol);
 }
 
 bool Board::isPawnMoveValid(int fromRow, int fromCol, int toRow, int toCol) const {

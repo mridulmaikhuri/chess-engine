@@ -114,8 +114,6 @@ public:
 
     bool isMoveValid(int fromRow, int fromCol, int toRow, int toCol);
 
-    bool isMoveLegal(int fromRow, int fromCol, int toRow, int toCol);
-
     bool isKingInCheck(PieceColor color) const;
 
     bool isCheckmate(PieceColor color);
