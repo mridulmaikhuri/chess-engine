@@ -100,7 +100,7 @@ void Board::movePiece(int fromRow, int fromCol, int toRow, int toCol, PieceType 
     rec.toCol = toCol;
     rec.movedPiece = piece;
     rec.capturedPiece = captured;
-    rec.promotedTo = EMPTY;
+    rec.promotedTo = promotionType;
 
     rec.prevEnPassantAvailable = enPassantAvailable;
     rec.prevEnPassantRow = enPassantRow;
@@ -189,23 +189,10 @@ void Board::movePiece(int fromRow, int fromCol, int toRow, int toCol, PieceType 
 
     // switch turn
     turn = (turn == WHITE) ? BLACK : WHITE;
-
-    // check for game over
-    if (isCheckmate(turn)) {
-        gameOver = true;
-        winner = (turn == WHITE) ? BLACK : WHITE;
-        return;
-    }
-
-    if (isStalemate(turn)) {
-        gameOver = true;
-        winner = NONE;
-        return;
-    }
 }
 
-bool Board::undoMove() {
-    if (historySize == 0) return false;
+void Board::undoMove() {
+    if (historySize == 0) return;
 
     MoveRecord rec = history[--historySize];
 
@@ -245,7 +232,6 @@ bool Board::undoMove() {
     winner = NONE;
 
     turn = (turn == WHITE) ? BLACK : WHITE;
-    return true;
 }
 
 bool Board::isMoveLegal(int fromRow, int fromCol, int toRow, int toCol) {
@@ -435,23 +421,10 @@ bool Board::isKingInCheck(PieceColor color) const {
 }
 
 bool Board::wouldLeaveKingInCheck(int fromRow, int fromCol, int toRow, int toCol) {
-    Board temp = *this;
-
-    Piece movingPiece = temp.board[fromRow][fromCol];
-
-    if (movingPiece.type == PAWN && abs(toCol - fromCol) == 1
-    && temp.board[toRow][toCol].type == EMPTY && temp.enPassantAvailable
-    && toRow == temp.enPassantRow && toCol == temp.enPassantCol) {
-        int capturedRow = (movingPiece.color == WHITE) ? toRow + 1 : toRow - 1;
-        temp.board[capturedRow][toCol] = {EMPTY, NONE};
-    }
-
-    temp.board[toRow][toCol] = movingPiece;
-    temp.board[fromRow][fromCol] = {EMPTY, NONE};
-
-    if (movingPiece.type == KING) temp.updateKingPosition(movingPiece.color, toRow, toCol);
-
-    return temp.isKingInCheck(movingPiece.color);
+    movePiece(fromRow, fromCol, toRow, toCol, EMPTY);
+    bool res = isKingInCheck((turn == WHITE) ? BLACK : WHITE);
+    undoMove();
+    return res;
 }
 
 bool Board::hasAnyLegalMove(PieceColor color) {
@@ -485,6 +458,24 @@ bool Board::isCheckmate(PieceColor color) {
 
 bool Board::isStalemate(PieceColor color) {
     return !isKingInCheck(color) && !hasAnyLegalMove(color);
+}
+
+bool Board::isGameOver() {
+    // check for checkmate
+    if (isCheckmate(turn)) {
+        gameOver = true;
+        winner = (turn == WHITE) ? BLACK : WHITE;
+        return true;
+    }
+
+    // check for stalemate
+    if (isStalemate(turn)) {
+        gameOver = true;
+        winner = NONE;
+        return true;
+    }
+
+    return false;
 }
 
 void Board::promotePawn(int row, int col, PieceType promotionPiece) {
@@ -530,7 +521,8 @@ bool Board::isSquareAttacked(int row, int col, PieceColor color) const {
                     break;
                 
                 case KING:
-                    if (isKingMoveValid(r, c, row, col)) return true;
+                    if (abs(r - row) <= 1 && abs(c - col) <= 1)
+                        return true;
                     break;
 
                 default:

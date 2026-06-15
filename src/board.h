@@ -23,27 +23,44 @@ struct Piece {
     PieceColor color;
 };
 
-struct Move {
-    int fromRow, fromCol;
-    int toRow, toCol;
-    PieceType promotion;
+struct MoveRecord {
+    int fromRow, fromCol, toRow, toCol;
+    Piece movedPiece;
+    Piece capturedPiece;
+    PieceType promotedTo;
+
+    bool prevEnPassantAvailable;
+    int prevEnPassantRow, prevEnPassantCol;
+
+    bool prevWhiteKingMoved;
+    bool prevBlackKingMoved;
+    bool prevWhiteKingSideRookMoved;
+    bool prevWhiteQueenSideRookMoved;
+    bool prevBlackKingSideRookMoved;
+    bool prevBlackQueenSideRookMoved;
+
+    bool wasEnPassant;
+    int enPassantCapturedRow, enPassantCapturedCol;
+    
+    bool wasCastle;
+    int rookFromCol;
+    int rookToCol;
 };
 
 class Board {
 private:
     Piece board[BOARD_SIZE][BOARD_SIZE];
-
     PieceColor turn;
 
+    // Castling
     bool whiteKingMoved;
     bool blackKingMoved;
-
     bool whiteKingsideRookMoved;
     bool whiteQueensideRookMoved;
-
     bool blackKingsideRookMoved;
     bool blackQueensideRookeMoved;
 
+    // en-passant
     bool enPassantAvailable;
     int enPassantRow;
     int enPassantCol;
@@ -53,31 +70,6 @@ private:
 
     int whiteKingRow, whiteKingCol;
     int blackKingRow, blackKingCol;
-
-    struct MoveRecord {
-        int fromRow, fromCol, toRow, toCol;
-        Piece movedPiece;
-        Piece capturedPiece;
-        PieceType promotedTo;
-
-        bool prevEnPassantAvailable;
-        int prevEnPassantRow, prevEnPassantCol;
-
-        bool prevWhiteKingMoved;
-        bool prevBlackKingMoved;
-        bool prevWhiteKingSideRookMoved;
-        bool prevWhiteQueenSideRookMoved;
-        bool prevBlackKingSideRookMoved;
-        bool prevBlackQueenSideRookMoved;
-
-        bool wasEnPassant;
-        
-        bool wasCastle;
-        int rookFromCol;
-        int rookToCol;
-
-        int enPassantCapturedRow, enPassantCapturedCol;
-    };
 
     MoveRecord history[1024];
     int historySize;
@@ -112,13 +104,13 @@ public:
 
     PieceColor getTurn() const { return turn; }
 
-    bool isGameOver() const { return gameOver; }
+    bool isGameOver();
 
     PieceColor getWinner() const { return winner; }
 
     void movePiece(int fromRow, int fromCol, int toRow, int toCol, PieceType promotionType);
 
-    bool undoMove();
+    void undoMove();
 
     bool isMoveValid(int fromRow, int fromCol, int toRow, int toCol);
 
