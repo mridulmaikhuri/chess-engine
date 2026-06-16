@@ -67,26 +67,7 @@ void Board::init() {
     board[7][4] = {KING, WHITE};
 }
 
-bool Board::isSquareValid(int row, int col) const {
-    return (row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE);
-}
-
-Piece Board::getPiece(int row, int col) const {
-    if (!isSquareValid(row, col)) return {EMPTY, NONE};
-    return board[row][col];
-}
-
-void Board::updateKingPosition(PieceColor color, int row, int col) {
-    if (color == WHITE) {
-        whiteKingRow = row;
-        whiteKingCol = col;
-    } else {
-        blackKingRow = row;
-        blackKingCol = col;
-    }
-}
-
-void Board::movePiece(int fromRow, int fromCol, int toRow, int toCol, PieceType promotionType) {
+void Board::makeMove(int fromRow, int fromCol, int toRow, int toCol, PieceType promotionType) {
     Piece piece = board[fromRow][fromCol];
     Piece captured = board[toRow][toCol];
 
@@ -277,6 +258,25 @@ bool Board::isMoveValid(int fromRow, int fromCol, int toRow, int toCol) {
     return isMoveLegal && !wouldLeaveKingInCheck(fromRow, fromCol, toRow, toCol);
 }
 
+
+bool Board::isGameOver() {
+    // check for checkmate
+    if (isCheckmate(turn)) {
+        gameOver = true;
+        winner = (turn == WHITE) ? BLACK : WHITE;
+        return true;
+    }
+
+    // check for stalemate
+    if (isStalemate(turn)) {
+        gameOver = true;
+        winner = NONE;
+        return true;
+    }
+
+    return false;
+}
+
 bool Board::isPawnMoveValid(int fromRow, int fromCol, int toRow, int toCol) const {
     Piece piece = board[fromRow][fromCol];
     Piece target = board[toRow][toCol];
@@ -407,21 +407,6 @@ bool Board::isKingMoveValid(int fromRow, int fromCol, int toRow, int toCol) cons
     return true;
 }
 
-bool Board::isKingInCheck(PieceColor color) const {
-    int kingRow = (color == WHITE) ? whiteKingRow : blackKingRow;
-    int kingCol = (color == WHITE) ? whiteKingCol : blackKingCol;
-
-    PieceColor enemy = (color == WHITE) ? BLACK : WHITE;
-    return isSquareAttacked(kingRow, kingCol, enemy);   
-}
-
-bool Board::wouldLeaveKingInCheck(int fromRow, int fromCol, int toRow, int toCol) {
-    movePiece(fromRow, fromCol, toRow, toCol, EMPTY);
-    bool res = isKingInCheck((turn == WHITE) ? BLACK : WHITE);
-    undoMove();
-    return res;
-}
-
 bool Board::hasAnyLegalMove(PieceColor color) {
     PieceColor originalTurn = turn;
     turn = color;
@@ -453,36 +438,6 @@ bool Board::isCheckmate(PieceColor color) {
 
 bool Board::isStalemate(PieceColor color) {
     return !isKingInCheck(color) && !hasAnyLegalMove(color);
-}
-
-bool Board::isGameOver() {
-    // check for checkmate
-    if (isCheckmate(turn)) {
-        gameOver = true;
-        winner = (turn == WHITE) ? BLACK : WHITE;
-        return true;
-    }
-
-    // check for stalemate
-    if (isStalemate(turn)) {
-        gameOver = true;
-        winner = NONE;
-        return true;
-    }
-
-    return false;
-}
-
-void Board::promotePawn(int row, int col, PieceType promotionPiece) {
-    Piece &piece = board[row][col];
-
-    if (piece.type != PAWN) return;
-
-    if ((piece.color == WHITE && row == 0) ||
-        (piece.color == BLACK && row == 7)) 
-    {
-        piece.type = promotionPiece;
-    }
 }
 
 bool Board::isSquareAttacked(int row, int col, PieceColor color) const {
@@ -527,4 +482,50 @@ bool Board::isSquareAttacked(int row, int col, PieceColor color) const {
     }
 
     return false;
+}
+
+bool Board::isSquareValid(int row, int col) const {
+    return (row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE);
+}
+
+Piece Board::getPiece(int row, int col) const {
+    if (!isSquareValid(row, col)) return {EMPTY, NONE};
+    return board[row][col];
+}
+
+void Board::updateKingPosition(PieceColor color, int row, int col) {
+    if (color == WHITE) {
+        whiteKingRow = row;
+        whiteKingCol = col;
+    } else {
+        blackKingRow = row;
+        blackKingCol = col;
+    }
+}
+
+void Board::promotePawn(int row, int col, PieceType promotionPiece) {
+    Piece &piece = board[row][col];
+
+    if (piece.type != PAWN) return;
+
+    if ((piece.color == WHITE && row == 0) ||
+        (piece.color == BLACK && row == 7)) 
+    {
+        piece.type = promotionPiece;
+    }
+}
+
+bool Board::isKingInCheck(PieceColor color) const {
+    int kingRow = (color == WHITE) ? whiteKingRow : blackKingRow;
+    int kingCol = (color == WHITE) ? whiteKingCol : blackKingCol;
+
+    PieceColor enemy = (color == WHITE) ? BLACK : WHITE;
+    return isSquareAttacked(kingRow, kingCol, enemy);   
+}
+
+bool Board::wouldLeaveKingInCheck(int fromRow, int fromCol, int toRow, int toCol) {
+    makeMove(fromRow, fromCol, toRow, toCol, EMPTY);
+    bool res = isKingInCheck((turn == WHITE) ? BLACK : WHITE);
+    undoMove();
+    return res;
 }

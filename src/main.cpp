@@ -122,7 +122,7 @@ void handleBoardClick(AppState& state, int row, int col) {
                 state.promotionCol = col;
                 state.promotionColor = movingPiece.color;
             } else {
-                board.movePiece(state.selectedRow, state.selectedCol, row, col, EMPTY);
+                board.makeMove(state.selectedRow, state.selectedCol, row, col, EMPTY);
                 state.pieceSelected = false;
                 state.selectedRow = -1;
                 state.selectedCol = -1;
@@ -159,7 +159,7 @@ void handlePromotionClick(AppState& state, int mouseX, int mouseY, int tileSize)
         mouseY >= box.y && mouseY < box.y + box.h && 
         state.board.isMoveValid(state.selectedRow, state.selectedCol,
         state.promotionRow, state.promotionCol)) {
-            state.board.movePiece(
+            state.board.makeMove(
                 state.selectedRow, state.selectedCol,
                 state.promotionRow, state.promotionCol, 
                 choices[i]

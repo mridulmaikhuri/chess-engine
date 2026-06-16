@@ -108,7 +108,7 @@ public:
 
     PieceColor getWinner() const { return winner; }
 
-    void movePiece(int fromRow, int fromCol, int toRow, int toCol, PieceType promotionType);
+    void makeMove(int fromRow, int fromCol, int toRow, int toCol, PieceType promotionType);
 
     void undoMove();
 
