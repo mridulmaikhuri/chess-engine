@@ -1,4 +1,7 @@
 #pragma once
+#include <cstdint>
+#include <unordered_map>
+using namespace std;
 
 const int BOARD_SIZE = 8;
 
@@ -25,6 +28,8 @@ struct Piece {
 
 struct MoveRecord {
     int fromRow, fromCol, toRow, toCol;
+    int fiftyMove;
+    uint64_t prevHash;
     Piece movedPiece;
     Piece capturedPiece;
     PieceType promotedTo;
@@ -52,6 +57,9 @@ private:
     Piece board[BOARD_SIZE][BOARD_SIZE];
     PieceColor turn;
 
+    int fiftyMove;
+    unordered_map<uint64_t, int> repTable;
+
     // Castling
     bool whiteKingMoved;
     bool blackKingMoved;
@@ -71,8 +79,18 @@ private:
     int whiteKingRow, whiteKingCol;
     int blackKingRow, blackKingCol;
 
+    uint64_t zobristPieces[12][64];
+    uint64_t zobristturn;
+    uint64_t zobristCastle[4];
+    uint64_t zobristEnPassant[8];
+    uint64_t currentHash;
+
     MoveRecord history[1024];
     int historySize;
+
+    uint64_t computeHash() const;
+
+    int pieceIndex(Piece piece) const;
 
     bool isSquareValid(int row, int col) const;
 
@@ -99,6 +117,8 @@ public:
     Board();
 
     void init();
+
+    uint64_t getHash() const { return currentHash; }
 
     Piece getPiece(int row, int col) const;
 

@@ -2,14 +2,39 @@
 #include <iostream>
 #include <algorithm>
 #include <cstdlib>
+#include <random>
 using namespace std;
+
+static uint64_t randomU64() {
+    static mt19937_64 rng(123456789);
+    return rng();
+}
 
 Board::Board() {
     init();
+
+    // zobrist hashing
+    for (int piece = 0;piece < 12;piece ++) {
+        for (int square = 0;square < 64;square ++) {
+            zobristPieces[piece][square] = randomU64();
+        }
+    }
+    zobristturn = randomU64();
+    for (int i = 0;i < 4;i ++) {
+        zobristCastle[i] = randomU64();
+    }
+    for (int i = 0;i < 8;i ++) {
+        zobristEnPassant[i] = randomU64();
+    }
+
+    currentHash = computeHash();
+    repTable[currentHash] = 1;
 }   
 
 void Board::init() {
     historySize = 0;
+    fiftyMove = 0;
+    repTable.clear();
 
     turn = WHITE;
 
@@ -67,13 +92,60 @@ void Board::init() {
     board[7][4] = {KING, WHITE};
 }
 
+int Board::pieceIndex(Piece piece) const {
+    if (piece.color == WHITE) {
+        switch (piece.type) {
+            case PAWN: return 0;
+            case KNIGHT: return 1;
+            case BISHOP: return 2;
+            case ROOK: return 3;
+            case QUEEN: return 4;
+            case KING: return 5;
+            default: return -1;
+        }
+    } else {
+        switch (piece.type) {
+            case PAWN: return 6;
+            case KNIGHT: return 7;
+            case BISHOP: return 8;
+            case ROOK: return 9;
+            case QUEEN: return 10;
+            case KING: return 11;
+            default: return -1;
+        }
+    }
+}
+
+uint64_t Board::computeHash() const {
+    uint64_t hash = 0;
+    for (int r = 0;r < BOARD_SIZE;r ++) {
+        for (int c = 0;c < BOARD_SIZE;c ++) {
+            Piece piece = board[r][c];
+            int idx = pieceIndex(piece);
+            if (idx == -1) continue;
+            int square = r*8 + c;
+            hash ^= zobristPieces[idx][square];
+        }
+    }
+    if (turn == BLACK) hash ^= zobristturn;
+
+    if (!whiteKingMoved && !whiteKingsideRookMoved) hash ^= zobristCastle[0];
+    if (!whiteKingMoved && !whiteQueensideRookMoved) hash ^= zobristCastle[1];
+    if (!blackKingMoved && !blackKingsideRookMoved) hash ^= zobristCastle[2];
+    if (!blackKingMoved && !blackQueensideRookeMoved) hash ^= zobristCastle[3];
+
+    if (enPassantAvailable) hash ^= zobristEnPassant[enPassantCol];
+
+    return hash;
+}
+
 void Board::makeMove(int fromRow, int fromCol, int toRow, int toCol, PieceType promotionType) {
     Piece piece = board[fromRow][fromCol];
     Piece captured = board[toRow][toCol];
-
+    
     // Build history
     MoveRecord rec;
-
+    
     rec.fromRow = fromRow;
     rec.fromCol = fromCol;
     rec.toRow = toRow;
@@ -81,21 +153,24 @@ void Board::makeMove(int fromRow, int fromCol, int toRow, int toCol, PieceType p
     rec.movedPiece = piece;
     rec.capturedPiece = captured;
     rec.promotedTo = promotionType;
-
+    rec.fiftyMove = fiftyMove;
+    rec.prevHash = currentHash;
+    
     rec.prevEnPassantAvailable = enPassantAvailable;
     rec.prevEnPassantRow = enPassantRow;
     rec.prevEnPassantCol = enPassantCol;
-
+    
     rec.prevWhiteKingMoved = whiteKingMoved;
     rec.prevBlackKingMoved = blackKingMoved;
     rec.prevWhiteKingSideRookMoved = whiteKingsideRookMoved;
     rec.prevWhiteQueenSideRookMoved = whiteQueensideRookMoved;
     rec.prevBlackKingSideRookMoved = blackKingsideRookMoved;
     rec.prevBlackQueenSideRookMoved = blackQueensideRookeMoved;
-
+    
     rec.wasEnPassant = false;
     rec.wasCastle = false;
-
+    
+    fiftyMove = (piece.type == PAWN || captured.type != EMPTY) ? 0 : ++fiftyMove;
     // en-passant
     if (piece.type == PAWN && abs(toCol - fromCol) == 1 && board[toRow][toCol].type == EMPTY
         && enPassantAvailable && toRow == enPassantRow && toCol == enPassantCol) 
@@ -169,13 +244,18 @@ void Board::makeMove(int fromRow, int fromCol, int toRow, int toCol, PieceType p
 
     // switch turn
     turn = (turn == WHITE) ? BLACK : WHITE;
+
+    currentHash = computeHash();
+    repTable[currentHash] ++;
 }
 
 void Board::undoMove() {
     if (historySize == 0) return;
+    repTable[currentHash] --;
 
     MoveRecord rec = history[--historySize];
 
+    fiftyMove = rec.fiftyMove;
     board[rec.fromRow][rec.fromCol] = rec.movedPiece;
     board[rec.toRow][rec.toCol] = rec.capturedPiece;
 
@@ -212,6 +292,7 @@ void Board::undoMove() {
     winner = NONE;
 
     turn = (turn == WHITE) ? BLACK : WHITE;
+    currentHash = rec.prevHash;
 }
 
 bool Board::isMoveValid(int fromRow, int fromCol, int toRow, int toCol) {
@@ -269,6 +350,21 @@ bool Board::isGameOver() {
 
     // check for stalemate
     if (isStalemate(turn)) {
+        gameOver = true;
+        winner = NONE;
+        return true;
+    }
+
+    // check for 50 move rule 
+    if (fiftyMove >= 100) {
+        gameOver = true;
+        winner = NONE;
+        return true;
+    }
+
+    // three move rep
+    auto it = repTable.find(currentHash);
+    if (it != repTable.end() && it->second >= 3) {
         gameOver = true;
         winner = NONE;
         return true;
