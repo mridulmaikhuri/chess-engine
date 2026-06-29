@@ -10,6 +10,7 @@ find_package(SDL3_image REQUIRED)
 add_executable(app
     src/main.cpp
     src/board.cpp
+    src/engine.cpp
 )
 
 target_link_libraries(app

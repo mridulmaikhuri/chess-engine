@@ -1,7 +1,9 @@
 #include <SDL3/SDL.h>
 #include <iostream>
+#include <thread>
 #include <SDL3_image/SDL_image.h>
 #include "board.h"
+#include"engine.h"
 using namespace std;
 
 const int WINDOW_WIDTH = 800, WINDOW_HEIGHT = 800;
@@ -10,6 +12,7 @@ const int TILE_SIZE = WINDOW_WIDTH/BOARD_SIZE;
 enum class GameScreen {
     PLAYING,
     PROMOTION,
+    ENGINE_MOVE,
     GAME_OVER
 };
 
@@ -23,9 +26,15 @@ struct AppState {
     vector<pair<int,int>> legalMoves;
 
     GameScreen screen = GameScreen::PLAYING;
+
     int promotionRow = -1;
     int promotionCol = -1;
     PieceColor promotionColor = NONE;
+
+    bool engineThinking = false;
+    bool engineMoveReady = false;
+    vector<int> bestMove;
+    thread engineThread;
 };
 
 
@@ -130,6 +139,8 @@ void handleBoardClick(AppState& state, int row, int col) {
 
                 if (board.isGameOver()) {
                     state.screen = GameScreen::GAME_OVER;
+                } else {
+                    state.screen = GameScreen::ENGINE_MOVE;
                 }
             }
         } else {
@@ -168,9 +179,11 @@ void handlePromotionClick(AppState& state, int mouseX, int mouseY, int tileSize)
             state.selectedRow = -1;
             state.selectedCol = -1;
             state.legalMoves.clear();
-            state.screen = state.board.isGameOver()
-                ? GameScreen::GAME_OVER
-                : GameScreen::PLAYING;
+            if (state.board.isGameOver()) {
+                state.screen = GameScreen::GAME_OVER;
+            } else {
+                state.screen = GameScreen::ENGINE_MOVE;
+            }
             return;
         }
     }
@@ -390,12 +403,36 @@ int main() {
             }
         }
 
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
-
         renderBoard(renderer, state, TILE_SIZE);
 
-        if (state.screen == GameScreen::PROMOTION) {
+        if (state.screen == GameScreen::ENGINE_MOVE) {
+            // write logic for engine move
+            if (!state.engineThinking) {
+                state.engineThinking = true;
+                state.engineThread = thread([&state]() {
+                    Board boardCopy = state.board;
+                    state.bestMove = search(boardCopy, 4);
+                    state.engineMoveReady = true;
+                });
+            }
+            if (state.engineMoveReady) {
+                state.engineThread.join();
+                cout << state.bestMove[0] << " "
+                << state.bestMove[1] << " "
+                << state.bestMove[2] << " "
+                << state.bestMove[3] << "\n";
+                state.board.makeMove(state.bestMove[0],
+                state.bestMove[1], state.bestMove[2],
+                state.bestMove[3], QUEEN);
+                state.engineThinking = false;
+                state.engineMoveReady = false;
+                if (state.board.isGameOver()) {
+                    state.screen = GameScreen::GAME_OVER;
+                } else {
+                    state.screen = GameScreen::PLAYING;
+                }
+            }
+        } else if (state.screen == GameScreen::PROMOTION) {
             renderPromotionDialog(renderer, state, TILE_SIZE);
         } else if (state.screen == GameScreen::GAME_OVER) {
             renderGameOver(renderer, state, TILE_SIZE);

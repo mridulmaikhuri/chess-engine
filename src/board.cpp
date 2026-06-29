@@ -152,7 +152,7 @@ void Board::makeMove(int fromRow, int fromCol, int toRow, int toCol, PieceType p
     rec.toCol = toCol;
     rec.movedPiece = piece;
     rec.capturedPiece = captured;
-    rec.promotedTo = promotionType;
+    rec.promotedTo = EMPTY;
     rec.fiftyMove = fiftyMove;
     rec.prevHash = currentHash;
     
@@ -235,7 +235,9 @@ void Board::makeMove(int fromRow, int fromCol, int toRow, int toCol, PieceType p
     }
 
     // Pawn promotion
-    if (piece.type == PAWN && ((piece.color == WHITE && toRow == 0) || (piece.color == BLACK && toRow == 7))) { 
+    if (piece.type == PAWN && ((piece.color == WHITE && toRow == 0) || (piece.color == BLACK && toRow == 7))
+    && promotionType != EMPTY) { 
+        rec.promotedTo = promotionType;
         promotePawn(toRow, toCol, promotionType );
     }
 
